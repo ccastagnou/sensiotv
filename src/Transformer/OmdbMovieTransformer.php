@@ -4,10 +4,12 @@ namespace App\Transformer;
 
 use App\Entity\Genre;
 use App\Entity\Movie;
+use Symfony\Component\Form\DataTransformerInterface;
+use Symfony\Component\Form\Exception\TransformationFailedException;
 
-class MovieTransformer
+class OmdbMovieTransformer implements DataTransformerInterface
 {
-    public function arrayToMovie(array $data): Movie
+    public function transform($data): Movie
     {
         $genres = explode(', ', $data['Genre']);
         $movie = (new Movie())
@@ -29,5 +31,10 @@ class MovieTransformer
         }
 
         return $movie;
+    }
+
+    public function reverseTransform(mixed $value)
+    {
+        // TODO: Implement reverseTransform() method.
     }
 }

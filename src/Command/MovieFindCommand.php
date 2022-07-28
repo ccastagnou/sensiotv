@@ -4,6 +4,8 @@ namespace App\Command;
 
 use App\Consumer\OMDbApiConsumer;
 use App\Provider\MovieProvider;
+use App\Repository\MovieRepository;
+use App\Transformer\OmdbMovieTransformer;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -18,53 +20,63 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 )]
 class MovieFindCommand extends Command
 {
-    private const TYPES = [
-        'id' => OMDbApiConsumer::MODE_ID,
-        'title' => OMDbApiConsumer::MODE_TITLE,
-    ];
-
-    public function __construct(private MovieProvider $provider, string $name = null)
-    {
+    public function __construct(
+        private MovieRepository $movieRepository,
+        private OMDbApiConsumer $consumer,
+        private OmdbMovieTransformer $transformer,
+        string $name = null
+    ) {
         parent::__construct($name);
     }
 
     protected function configure(): void
     {
         $this
-            ->setAliases(['movie:find'])
-            ->addArgument('type', InputArgument::OPTIONAL, 'The type of search, "title" or "id"')
-            ->addArgument('value', InputArgument::OPTIONAL, 'The title or ID to search.')
+            ->addArgument('value', InputArgument::OPTIONAL, 'The movie you are searching for.')
+            ->addArgument('type', InputArgument::OPTIONAL, 'The type of search (title or id).')
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-
-        $type = $input->getArgument('type');
-        while (!array_key_exists($type, self::TYPES)) {
-            $type = $io->ask('What is the type of the data used for the search? ("title" or "id")');
+        if (!$value = $input->getArgument('value')) {
+            $value = $io->ask('What is the title or id of the movie you\'researching for?');
         }
 
-        $value = $input->getArgument('value');
-        while (empty($value)) {
-            $value = $io->ask(sprintf('What is the %s you want to search?', $type));
+        $type = strtolower($input->getArgument('type'));
+        while (!in_array($type, ['title', 'id'])) {
+            $type = strtolower($io->ask('What type of data are your searching on? (id or title)'));
         }
 
-        $io->text(sprintf("Looking for a movie with %s %s", $type, $value));
+        $io->title('Your search :');
+        $io->text(sprintf("Searching for a movie with %s %s", $type, $value));
 
-        try {
-            $movie = $this->provider->getOneMovie(self::TYPES[$type], $value);
-        } catch (\Exception) {
-            $io->error('No movie found.');
+        $io->section('Searching the database.');
+        $property = $type === 'title' ? 'title' : 'imdbId';
 
-            return Command::FAILURE;
+        if (!$movie = $this->movieRepository->findOneBy([$property => $value])) {
+            $io->note('Not found in database.');
+            $io->section('Searching on OMDb API.');
+
+            $method= 'getMovieBy' . ucfirst($type);
+            $movie = $this->transformer->transform(
+                $this->consumer->$method($value)
+            );
+            if (!$movie) {
+                $io->error('No movie find on OMDb either!');
+                return Command::FAILURE;
+            }
+            $io->note('Movie found on OMDb! Saving in database.');
+            $this->movieRepository->add($movie, true);
         }
 
-        $io->success('Found a movie!');
-        $io->table(['OMDb ID', 'title', 'Rated'], [
-            [$movie->getOmdbId(), $movie->getTitle(), $movie->getRated()],
+        $io->section('Result :');
+        $io->table(['id', 'imdbId', 'Title', 'Rated'],[
+            [$movie->getId(), $movie->getOmdbId(), $movie->getTitle(), $movie->getRated()],
         ]);
+
+        $io->success('Movie successfully found and imported!');
 
         return Command::SUCCESS;
     }

@@ -4,29 +4,38 @@ namespace App\Provider;
 
 use App\Consumer\OMDbApiConsumer;
 use App\Entity\Movie;
-use App\Transformer\MovieTransformer;
+use App\Repository\MovieRepository;
+use App\Transformer\OmdbMovieTransformer;
 
 class MovieProvider
 {
     public function __construct(
+        private MovieRepository $movieRepository,
         private OMDbApiConsumer $consumer,
-        private MovieTransformer $transformer
+        private OmdbMovieTransformer $transformer
     ) {}
 
-    public function getOneMovie(string $type, string $value): Movie
+    public function getMovieByTitle(string $title)
     {
-        return $this->transformer->arrayToMovie(
-            $this->consumer->consume($type, $value)
-        );
+        return $this->getOneMovie(OMDbApiConsumer::MODE_TITLE, $title);
     }
 
-    public function getById(string $id): Movie
+    public function getMovieById(string $id): Movie
     {
         return $this->getOneMovie(OMDbApiConsumer::MODE_ID, $id);
     }
 
-    public function getByTitle(string $title): Movie
+    private function getOneMovie(string $mode, string $value)
     {
-        return $this->getOneMovie(OMDbApiConsumer::MODE_TITLE, $title);
+        $movie = $this->transformer->transform(
+            $this->consumer->consume($mode,  $value)
+        );
+
+        if ($entity = $this->movieRepository->findOneBy(['title' => $movie->getTitle()])) {
+            return $entity;
+        }
+        $this->movieRepository->add($movie, true);
+
+        return $movie;
     }
 }
