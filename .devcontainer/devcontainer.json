@@ -3,7 +3,7 @@
   //"build": { "dockerfile": "Dockerfile" },
   dockerComposeFile: "./docker-compose.yml",
   service: "symfony",
-  "workspaceFolder": "/workspaces",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "features": {
     "ghcr.io/shyim/devcontainers-features/symfony-cli:0": {},
   },
