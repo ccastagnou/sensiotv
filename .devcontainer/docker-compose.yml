@@ -26,6 +26,10 @@ services:
   symfony:
     container_name: symfony
     build: ./Dockerfile
+    volumes:
+      - ../:/workspaces:cached
+    network_mode: service:db
+    command: sleep infinity
 #    networks:
 #      - internal
 #    working_dir: /www
