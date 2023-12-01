@@ -25,7 +25,7 @@ services:
 
   symfony:
     container_name: symfony
-    build: ./Dockerfile
+    build: ./
     volumes:
       - ../..:/workspaces:cached
 #    network_mode: service:db
