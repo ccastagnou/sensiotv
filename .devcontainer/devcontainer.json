@@ -1,0 +1,50 @@
+{
+  "name": "[PHP]",
+  //"build": { "dockerfile": "Dockerfile" },
+  dockerComposeFile: "./docker-compose.yml",
+  service: "symfony",
+  "features": {
+    "ghcr.io/shyim/devcontainers-features/symfony-cli:0": {},
+  },
+  "containerEnv": {
+    "APP_ENV": "dev",
+    "DATABASE_URL": "sqlite:///%kernel.project_dir%/var/dev.db"
+  },
+  "onCreateCommand": {
+  },
+
+  "postCreateCommand": {
+  },
+
+  "postStartCommand": {
+    "server": ["symfony", "server:start", "--daemon", "--no-tls", "--port", "8000"]
+  },
+
+  "forwardPorts": [
+    8000
+  ],
+  "portsAttributes": {
+    "8000": {
+      "label": "Application",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "TheNouillet.symfony-vscode",
+        "bmewburn.vscode-intelephense-client",
+        "phproberto.vscode-php-getters-setters",
+        "xdebug.php-debug",
+        "whatwedo.twig",
+        "mikestead.dotenv",
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "php.debug.executablePath": "/usr/local/bin/php",
+        "php.validate.executablePath": "/usr/local/bin/php",
+        "symfony-vscode.phpExecutablePath": "/usr/local/bin/php"
+      }
+    }
+  }
+}
